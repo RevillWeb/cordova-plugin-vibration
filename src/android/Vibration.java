@@ -33,8 +33,6 @@ import android.media.AudioManager;
  */
 public class Vibration extends CordovaPlugin {
 
-    public static final String RINGER_MODE = "ringerMode";
-
     /**
      * Constructor.
      */
@@ -51,66 +49,23 @@ public class Vibration extends CordovaPlugin {
      */
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if (action.equals("vibrate")) {
-            this.vibrate(args.getLong(0));
+            boolean force = args.optBoolean(1, false);
+            this.vibrate(args.getLong(0), force);
         }
         else if (action.equals("vibrateWithPattern")) {
             JSONArray pattern = args.getJSONArray(0);
             int repeat = args.getInt(1);
+            boolean force = args.optBoolean(2, false);
             //add a 0 at the beginning of pattern to align with w3c
             long[] patternArray = new long[pattern.length()+1];
             patternArray[0] = 0;
             for (int i = 0; i < pattern.length(); i++) {
                 patternArray[i+1] = pattern.getLong(i);
             }
-            this.vibrateWithPattern(patternArray, repeat);
+            this.vibrateWithPattern(patternArray, repeat, force);
         }
         else if (action.equals("cancelVibration")) {
             this.cancelVibration();
-        }
-        else if (action.equals("getRingerMode")) {
-            AudioManager am = (AudioManager) cordova.getActivity().getBaseContext().getSystemService(Context.AUDIO_SERVICE);
-            int ringerMode = am.getRingerMode();
-            switch(ringerMode) {
-                case AudioManager.RINGER_MODE_NORMAL:
-                    callbackContext.success("normal");
-                    break;
-                case AudioManager.RINGER_MODE_SILENT:
-                    callbackContext.success("silent");
-                    break;
-                case AudioManager.RINGER_MODE_VIBRATE:
-                    callbackContext.success("vibrate");
-                    break;
-                default:
-                    callbackContext.error("Unknown ringer mode: " + ringerMode);
-            }
-            return true;
-        }
-        else if (action.equals("setRingerMode")) {
-            AudioManager am = (AudioManager) cordova.getActivity().getBaseContext().getSystemService(Context.AUDIO_SERVICE);
-
-            try {
-
-                JSONObject options = args.getJSONObject(0);
-                String ringerMode = options.getString(RINGER_MODE);
-                if (ringerMode.equals("normal")) {
-                    am.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-                    callbackContext.success();
-                } else if (ringerMode.equals("silent")) {
-                    am.setRingerMode(AudioManager.RINGER_MODE_SILENT);
-                    callbackContext.success();
-                } else if (ringerMode.equals("vibrate")) {
-                    am.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
-                    callbackContext.success();
-                } else {
-                    callbackContext.error("Unknown ringer mode: " + ringerMode);
-                }
-
-            } catch(SecurityException e) {
-                // This may not work on N without further permissions work
-                callbackContext.error(e.getMessage());
-            }
-
-            return true;
         }
         else {
             return false;
@@ -130,14 +85,15 @@ public class Vibration extends CordovaPlugin {
      * Vibrates the device for a given amount of time.
      *
      * @param time      Time to vibrate in ms.
+     * @param force
      */
-    public void vibrate(long time) {
+    public void vibrate(long time, boolean force) {
         // Start the vibration, 0 defaults to half a second.
         if (time == 0) {
             time = 500;
         }
         AudioManager manager = (AudioManager) this.cordova.getActivity().getSystemService(Context.AUDIO_SERVICE);
-        if (manager.getRingerMode() != AudioManager.RINGER_MODE_SILENT) {
+        if (force || manager.getRingerMode() != AudioManager.RINGER_MODE_SILENT) {
             Vibrator vibrator = (Vibrator) this.cordova.getActivity().getSystemService(Context.VIBRATOR_SERVICE);
             vibrator.vibrate(time);
         }
@@ -145,8 +101,7 @@ public class Vibration extends CordovaPlugin {
 
     /**
      * Vibrates the device with a given pattern.
-     *
-     * @param pattern     Pattern with which to vibrate the device.
+     *  @param pattern     Pattern with which to vibrate the device.
      *                    Pass in an array of longs that
      *                    are the durations for which to
      *                    turn on or off the vibrator in
@@ -162,11 +117,11 @@ public class Vibration extends CordovaPlugin {
      *                    off or to turn the vibrator on.
      *
      * @param repeat      Optional index into the pattern array at which
-     *                    to start repeating, or -1 for no repetition (default).
+     * @param force
      */
-    public void vibrateWithPattern(long[] pattern, int repeat) {
+    public void vibrateWithPattern(long[] pattern, int repeat, boolean force) {
         AudioManager manager = (AudioManager) this.cordova.getActivity().getSystemService(Context.AUDIO_SERVICE);
-        if (manager.getRingerMode() != AudioManager.RINGER_MODE_SILENT) {
+        if (force || manager.getRingerMode() != AudioManager.RINGER_MODE_SILENT) {
             Vibrator vibrator = (Vibrator) this.cordova.getActivity().getSystemService(Context.VIBRATOR_SERVICE);
             vibrator.vibrate(pattern, repeat);
         }
@@ -180,3 +135,4 @@ public class Vibration extends CordovaPlugin {
         vibrator.cancel();
     }
 }
+
