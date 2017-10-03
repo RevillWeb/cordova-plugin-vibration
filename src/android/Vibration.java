@@ -22,6 +22,8 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.content.Context;
 import android.os.Vibrator;
 import android.media.AudioManager;
@@ -30,6 +32,8 @@ import android.media.AudioManager;
  * This class provides access to vibration on the device.
  */
 public class Vibration extends CordovaPlugin {
+
+    public static final String RINGER_MODE = "ringerMode";
 
     /**
      * Constructor.
@@ -62,6 +66,51 @@ public class Vibration extends CordovaPlugin {
         }
         else if (action.equals("cancelVibration")) {
             this.cancelVibration();
+        }
+        else if (action.equals("getRingerMode")) {
+            AudioManager am = (AudioManager) cordova.getActivity().getBaseContext().getSystemService(Context.AUDIO_SERVICE);
+            int ringerMode = am.getRingerMode();
+            switch(ringerMode) {
+                case AudioManager.RINGER_MODE_NORMAL:
+                    callbackContext.success("normal");
+                    break;
+                case AudioManager.RINGER_MODE_SILENT:
+                    callbackContext.success("silent");
+                    break;
+                case AudioManager.RINGER_MODE_VIBRATE:
+                    callbackContext.success("vibrate");
+                    break;
+                default:
+                    callbackContext.error("Unknown ringer mode: " + ringerMode);
+            }
+            return true;
+        }
+        else if (action.equals("setRingerMode")) {
+            AudioManager am = (AudioManager) cordova.getActivity().getBaseContext().getSystemService(Context.AUDIO_SERVICE);
+
+            try {
+
+                JSONObject options = args.getJSONObject(0);
+                String ringerMode = options.getString(RINGER_MODE);
+                if (ringerMode.equals("normal")) {
+                    am.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+                    callbackContext.success();
+                } else if (ringerMode.equals("silent")) {
+                    am.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+                    callbackContext.success();
+                } else if (ringerMode.equals("vibrate")) {
+                    am.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+                    callbackContext.success();
+                } else {
+                    callbackContext.error("Unknown ringer mode: " + ringerMode);
+                }
+
+            } catch(SecurityException e) {
+                // This may not work on N without further permissions work
+                callbackContext.error(e.getMessage());
+            }
+
+            return true;
         }
         else {
             return false;
